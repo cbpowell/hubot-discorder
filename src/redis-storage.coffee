@@ -24,7 +24,6 @@ class RedisStorage
         callback(users,channels)
   
   updateUsers: (users) ->
-    console.log "updating users"
     for k,u of users
       @.updateUser(u.name, u.channelId)
   
@@ -45,7 +44,6 @@ class RedisStorage
     @client.del(keyprefix + 'users')
     
   updateChannels: (channels) ->
-    console.log "updating channels"
     for k,c of channels
       @.updateChannel c.channelId, c.name
   
