@@ -1,26 +1,24 @@
 {
-  "name": "hubot-mumble",
-  "version": "0.0.1",
+  "name": "hubot-mumbler",
+  "description": "A Hubot script to track users on a Mumble server.",
+  "version": "0.1.0",
   "author": {
-    "name": "Charles Powell",
-    "email": "cbpowell@gmail.com"
+      "name": "Charles Powell",
+      "email": "cbpowell@gmail.com"
   },
-  "description": "Mumble adapter for Hubot",
   "keywords": [
-    "hubot mumble adapter"
+      "hubot mumbler"
   ],
-  "licenses": [
-    {
-      "type": "MIT",
-      "url": "http://github.com/nandub/hubot-irc/raw/master/LICENSE"
-    }
-  ],
+  "license": "MIT",
+  
   "scripts": {
       "test": "echo \"Error: no test specified\" && exit 1"
     },
-  "main": "./src/mumble.coffee",
+
+  "main": "./src/mumbler.coffee",
   "engine": "node > 0.6.0",
   "dependencies": {
-    "mumble": "https://github.com/cbpowell/node-mumble/tarball/reduction"
+      "redis": "~0.9.1",
+      "mumble": "~2.8"
   }
 }
