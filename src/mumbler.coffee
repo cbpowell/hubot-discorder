@@ -28,7 +28,6 @@ Redis = require 'redis'
 fs = require 'fs'
 Mumbler = require 'mumble'
 
-MumblerModel = require './model'
 RedisStorage = require './redis-storage'
 
 String::strip = ->
@@ -75,18 +74,17 @@ module.exports = (robot) ->
       storage.clearUsers()
       storage.clearChannels()
       
-      # Gather rooms
-      channels = connection.channels
-      storage.updateChannels(channels)
-      
       # Gather users
       users = connection.users
       storage.updateUsers(users)
+    
+    connection.on 'channelState', (state) ->
+      unless state.channelId is null or state.name is null
+        storage.updateChannel(state.channelId, state.name)
 		
     connection.on "user-update", (user) ->
       userName = user.name
       channel = user.channelId
-      channelName = connection.channels[channel].name
       
       # Get current location for user
       storage.locationsForUsers userName, (err, previousChannel) ->
@@ -100,15 +98,16 @@ module.exports = (robot) ->
         # Filter non-room changes
         if channel is previousChannel
           return
+        
+        storage.channelNamesForIds channel, (err, channelName) ->
+          # Check type of update
+          if channelName?
+            message = "_#{userName}_ moved into #{channelName}"
+          else
+            message = "_#{userName}_ hopped on Mumble!"
       
-        # Check type of update
-        if channelName?
-          message = "_#{userName}_ moved into #{channelName}"
-        else
-          message = "_#{userName}_ hopped on Mumble!"
-      
-        # Update room(s)
-        robot.messageRoom process.env.HUBOT_MUMBLE_ANNOUNCE_ROOMS, message
+          # Update room(s)
+          robot.messageRoom process.env.HUBOT_MUMBLE_ANNOUNCE_ROOMS, message
     
     connection.on "user-remove", (user) ->
       console.log "User disconnected:", user

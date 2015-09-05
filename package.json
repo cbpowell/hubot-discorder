@@ -19,6 +19,6 @@
   "engine": "node > 0.6.0",
   "dependencies": {
       "redis": "~0.9.1",
-      "mumble": "~2.8"
+      "mumble": "~0.3.0"
   }
 }
