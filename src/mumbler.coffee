@@ -70,46 +70,41 @@ module.exports = (robot) ->
     connection.on "initialized", ->
       console.log "Mumble connection initialized"
       
-      # Clear users and rooms
-      storage.clearUsers()
-      storage.clearChannels()
-      
       # Gather users
-      users = connection.users
-      storage.updateUsers(users)
+      users = connection.users()
+      for u in users
+        storage.updateUser(u.name, u.channel.id)
     
     connection.on 'channelState', (state) ->
-      unless state.channelId is null or state.name is null
-        storage.updateChannel(state.channelId, state.name)
+      unless state.channel_id is null or state.name is null
+        storage.updateChannel(state.channel_id, state.name)
 		
-    connection.on "user-update", (user) ->
+    connection.on "user-move", (user, prevChannel, newChannel, actor) ->
       userName = user.name
-      channel = user.channelId
+      channel = newChannel.id
       
-      # Get current location for user
-      storage.locationsForUsers userName, (err, previousChannel) ->
-        # Update user
-        storage.updateUser(userName, channel)
-      
-        # Filter updates about self
-        if userName is options.nick
-          return
-      
-        # Filter non-room changes
-        if channel is previousChannel
-          return
-        
-        storage.channelNamesForIds channel, (err, channelName) ->
-          # Check type of update
-          if channelName?
-            message = "_#{userName}_ moved into #{channelName}"
-          else
-            message = "_#{userName}_ hopped on Mumble!"
-      
-          # Update room(s)
-          robot.messageRoom process.env.HUBOT_MUMBLE_ANNOUNCE_ROOMS, message
+      # Update user
+      storage.updateUser(userName, channel)
     
-    connection.on "user-remove", (user) ->
+      # Filter updates about self
+      if userName is options.nick
+        return
+    
+      # Filter non-room changes
+      if channel is prevChannel.id
+        return
+      
+      storage.channelNamesForIds channel, (err, channelName) ->
+        # Check type of update
+        if channelName?
+          message = "_#{userName}_ moved into #{channelName}"
+        else
+          message = "_#{userName}_ hopped on Mumble!"
+    
+        # Update room(s)
+        robot.messageRoom process.env.HUBOT_MUMBLE_ANNOUNCE_ROOMS, message
+    
+    connection.on "user-disconnect", (user) ->
       console.log "User disconnected:", user
       storage.updateUser(user.name)
       
@@ -117,12 +112,13 @@ module.exports = (robot) ->
       console.log "Text message:", textMessage
   
   robot.hear /(mumble me$)|(who'?s online\?)|(anyone ((online)|(on mumble))\??)/i, (msg) ->
-    storage.onlineUsers (users, channels) ->
+    ignored = [options.nick]
+    storage.onlineUsers ignored, (users, channels) ->
       message = "🎮 Online:"
       for channelName, users of channels
-        message = message + " (#{channelName}) "
+        message = message + " [#{channelName}] "
         for u in users
-          unless u is robot.name
+          unless u is options.nick
             message = message + "_#{u}_, "
       
       message = message.substring(0, message.length - 2)
@@ -134,19 +130,21 @@ module.exports = (robot) ->
       msg.send "Not a valid channel 😬"
       return
     
-    storage.onlineUsers (users, channels) ->
+    ignored = [options.nick]
+    storage.onlineUsers ignored, (users, channels) ->
       message = ''
       unless channels is not null and channels.length > 0
         for channelName, users of channels
           if channel.toLowerCase() is channelName.toLowerCase()
-            if users is not null and users.length > 0
+            if users.length > 0
               message = "🎮 Online in #{channelName}:"
               for u in users
-                unless u is robot.name
-                  message = message + "_#{u}_, "
+                message = message + "_#{u}_, "
+                  
             message = message.substring(0, message.length - 2)
             
       if message is null or message.length is 0
         message = "No one in #{channel} 😕"
                   
       msg.send message
+  

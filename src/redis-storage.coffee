@@ -6,13 +6,14 @@ class RedisStorage
   # Create a storage module that uses the provided Redis connection.
   constructor: (@client) ->
     
-  onlineUsers: (callback) ->
+  onlineUsers: (ignored, callback) ->
     @client.hgetall keyprefix + 'users', (err, users) =>
       userNames = []
       chanIds = []
       for user, chanId of users
-        userNames.push user
-        chanIds.push chanId
+        if user not in ignored
+          userNames.push user
+          chanIds.push chanId
       
       channels = {}
       @.channelNamesForIds chanIds, (err, channelNames) ->
