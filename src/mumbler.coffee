@@ -114,15 +114,19 @@ module.exports = (robot) ->
   robot.hear /(mumble me$)|(who'?s online\?)|(anyone ((online)|(on mumble))\??)/i, (msg) ->
     ignored = [options.nick]
     storage.onlineUsers ignored, (users, channels) ->
-      message = "🎮 Online:"
-      for channelName, users of channels
-        message = message + " [#{channelName}] "
-        for u in users
-          unless u is options.nick
-            message = message + "_#{u}_, "
+      if users.length is 0
+        message = "No one on Mumble 😕"
+        msg.send message
+      else
+        message = "🎮 Online:"
+        for channelName, users of channels
+          message = message + " [#{channelName}] "
+          for u in users
+            unless u is options.nick
+              message = message + "_#{u}_, "
       
-      message = message.substring(0, message.length - 2)
-      msg.send message
+        message = message.substring(0, message.length - 2)
+        msg.send message
     
   robot.hear /(?:mumble me (.+))|(?:(?:anyone|who'?s) (?:in|on) (.+)\?)/i, (msg) ->
     channel = msg.match[1] or msg.match[2]
@@ -147,4 +151,3 @@ module.exports = (robot) ->
         message = "No one in #{channel} 😕"
                   
       msg.send message
-  
