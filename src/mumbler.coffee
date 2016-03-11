@@ -32,6 +32,11 @@ RedisStorage = require './redis-storage'
 
 String::strip = ->
   if String::trim? then @trim() else @replace /^\s+|\s+$/g, ""
+  
+create_quiet_username = (username) ->
+  usernameHead = username.slice(0, 1)
+  usernameTail = username.slice(1, username.length)
+  usernameHead + "\u200B" + usernameTail
 
 module.exports = (robot) ->
 
@@ -58,7 +63,6 @@ module.exports = (robot) ->
     cert: fs.readFileSync(process.env.HUBOT_MUMBLE_CERT)
   
   storage = new RedisStorage(client)
-  #model = new MumblerModel(storage)
   
   # Initiate Mumble connection
   mumbler = new Mumbler.connect options.path, mumbleOptions, (error, connection) ->
@@ -95,17 +99,17 @@ module.exports = (robot) ->
         return
       
       storage.channelNamesForIds channel, (err, channelName) ->
+        displayName = create_quiet_username(userName)
         # Check type of update
         if channelName?
-          message = "_#{userName}_ moved into #{channelName}"
+          message = "#{displayName} moved into #{channelName}"
         else
-          message = "_#{userName}_ hopped on Mumble!"
+          message = "#{displayName} hopped on Mumble!"
     
         # Update room(s)
         robot.messageRoom process.env.HUBOT_MUMBLE_ANNOUNCE_ROOMS, message
     
     connection.on "user-disconnect", (user) ->
-      console.log "User disconnected:", user
       storage.updateUser(user.name)
       
     connection.on "text-message", (textMessage) ->
@@ -122,8 +126,8 @@ module.exports = (robot) ->
         for channelName, users of channels
           message = message + " [#{channelName}] "
           for u in users
-            unless u is options.nick
-              message = message + "_#{u}_, "
+            u = create_quiet_username(u)
+            message = message + "#{u}, "
       
         message = message.substring(0, message.length - 2)
         msg.send message
@@ -143,7 +147,8 @@ module.exports = (robot) ->
             if users.length > 0
               message = "🎮 Online in #{channelName}:"
               for u in users
-                message = message + "_#{u}_, "
+                create_quiet_username(u)
+                message = message + "#{u}, "
                   
             message = message.substring(0, message.length - 2)
             
