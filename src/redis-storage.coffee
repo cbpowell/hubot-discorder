@@ -10,20 +10,22 @@ class RedisStorage
     @client.hgetall keyprefix + 'users', (err, users) =>
       userNames = []
       chanIds = []
+      channels = {}
       for user, chanId of users
         if user not in ignored
           userNames.push user
           chanIds.push chanId
       
-      unless chanIds.length is 0
-        channels = {}
+      if chanIds.length > 0
         @.channelNamesForIds chanIds, (err, channelNames) ->
-          channels = {}
           for chanName, ind in channelNames
             users[userNames[ind]] = chanName
             (channels[chanName] or= []).push userNames[ind]
-        
-      callback(users,channels)
+          
+          callback(userNames,channels)
+            
+      else
+        callback(userNames,channels)
   
   updateUsers: (users) ->
     for k,u of users
