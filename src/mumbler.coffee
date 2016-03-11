@@ -54,8 +54,8 @@ module.exports = (robot) ->
     password: process.env.HUBOT_MUMBLE_PASSWORD
   
   mumbleOptions =
-    key:  process.env.HUBOT_MUMBLE_KEY
-    cert: process.env.HUBOT_MUMBLE_CERT
+    key:  fs.readFileSync(process.env.HUBOT_MUMBLE_KEY)
+    cert: fs.readFileSync(process.env.HUBOT_MUMBLE_CERT)
   
   storage = new RedisStorage(client)
   #model = new MumblerModel(storage)
