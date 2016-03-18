@@ -90,8 +90,9 @@ module.exports = (robot) ->
       userName = user.name
       channel = newChannel.id
       
-      # Update user
-      storage.updateUser(userName, channel)
+      # Take opportunity to update all users
+      users = connection.users()
+      storage.updateUsers(users)
     
       # Filter updates about self
       if userName is options.nick
@@ -113,7 +114,9 @@ module.exports = (robot) ->
         robot.messageRoom process.env.HUBOT_MUMBLE_ANNOUNCE_ROOMS, message
     
     connection.on "user-disconnect", (user) ->
-      storage.updateUser(user.name)
+      # Take opportunity to update all users
+      users = connection.users()
+      storage.updateUsers(users)
       
     connection.on "text-message", (textMessage) ->
       console.log "Text message:", textMessage
