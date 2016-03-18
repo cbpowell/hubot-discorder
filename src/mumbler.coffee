@@ -74,7 +74,10 @@ module.exports = (robot) ->
     connection.on "initialized", ->
       console.log "Mumble connection initialized"
       
-      # Gather users
+      # Clear previous users
+      storage.clearUsers
+      
+      # Gather current users
       users = connection.users()
       for u in users
         storage.updateUser(u.name, u.channel.id)
