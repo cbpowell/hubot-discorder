@@ -118,6 +118,9 @@ module.exports = (robot) ->
       users = connection.users()
       storage.updateUsers(users)
       
+      # Remove leaving user
+      storage.removeUser(user.name)
+      
     connection.on "text-message", (textMessage) ->
       console.log "Text message:", textMessage
   

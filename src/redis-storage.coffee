@@ -28,11 +28,14 @@ class RedisStorage
         callback(userNames,channels)
   
   updateUsers: (users) ->
+    # Clear users
+    @.clearUsers
+    # Update users
     for k,u of users
-      @.updateUser(u.name, u.channelId)
+      @.updateUser(u.name, u.channel.id)
   
-  updateUser: (userName, location = null) ->
-    if location then @client.hset keyprefix + 'users', userName, location else @.removeUser(userName)
+  updateUser: (userName, location) ->
+    @client.hset keyprefix + 'users', userName, location
     
   removeUser: (userName) ->
     @client.hdel keyprefix + 'users', userName
