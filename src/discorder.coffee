@@ -5,8 +5,9 @@
 #   Discord.js
 #
 # Configuration:
-#   HUBOT_MUMBOT_NICK - Username for Mumbot on the Mumble server
-#   HUBOT_DISCORD_TOKEN - Discord app token for bot-type
+#   HUBOT_DISCORDER_NICK - Username for Mumbot on the Mumble server
+#   HUBOT_DISCORDER_TOKEN - Discord app token for bot-type
+#   HUBOT_DISCORDER_ANNOUNCE_ROOMS - Rooms to make announcements in
 #
 # Commands:
 #   mumble me - List users on Discord, in all channels
@@ -31,7 +32,6 @@ create_quiet_username = (username) ->
   
 getAllIndexes = (arr, val) ->
   indexes = []
-  i = undefined
   i = 0
   while i < arr.length
     if arr[i] == val
@@ -43,12 +43,12 @@ getAllIndexes = (arr, val) ->
 module.exports = (robot) ->
   # Configure Mumble interface
   options =
-    nick:     process.env.HUBOT_MUMBLE_NICK or robot.name
+    nick:     process.env.HUBOT_DISCORDER_NICK or robot.name
     #path:     process.env.HUBOT_MUMBLE_PATH
   
   # Initiate Discord connection
   mumbler = new Discord.Client
-  token = process.env.HUBOT_DISCORD_TOKEN
+  token = process.env.HUBOT_DISCORDER_TOKEN
   
   mumbler.on "ready", ->
     console.log "Discord connection ready!"
@@ -71,15 +71,15 @@ module.exports = (robot) ->
     
     # Update room(s)
     message = "🎮 #{memberName} moved into #{channelName}"
-    robot.messageRoom process.env.HUBOT_MUMBLE_ANNOUNCE_ROOMS, message
+    robot.messageRoom process.env.HUBOT_DISCORDER_ANNOUNCE_ROOMS, message
   
   mumbler.on "disconnect", (event) ->
     message = "/me disconnected from Discord 😩"
-    robot.messageRoom robot.messageRoom process.env.HUBOT_MUMBLE_ANNOUNCE_ROOMS, message
+    robot.messageRoom robot.messageRoom process.env.HUBOT_DISCORDER_ANNOUNCE_ROOMS, message
     
   mumbler.on "reconnecting", (event) ->
     message = "/me is attempting to reconnect to Discord 🤔"
-    robot.messageRoom robot.messageRoom process.env.HUBOT_MUMBLE_ANNOUNCE_ROOMS, message
+    robot.messageRoom robot.messageRoom process.env.HUBOT_DISCORDER_ANNOUNCE_ROOMS, message
   
   # Login
   mumbler.login token

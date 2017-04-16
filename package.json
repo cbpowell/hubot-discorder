@@ -15,7 +15,7 @@
       "test": "echo \"Error: no test specified\" && exit 1"
     },
 
-  "main": "./src/mumbler.coffee",
+  "main": "./src/discorder.coffee",
   "engine": "node > 0.6.0",
   "dependencies": {
       "discord.js": "^11.0.0"
