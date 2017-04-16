@@ -85,7 +85,7 @@ module.exports = (robot) ->
   # Login
   mumbler.login token
   
-  robot.hear /(mumble me$)|(who'?s online\?)|(anyone ((online)|(on mumble))\??)/i, (msg) ->
+  robot.hear /(mumble me$)|(discord me$)|(who'?s online\?)|(anyone ((online)|(on mumble)|(on discord))\??)/i, (msg) ->
     # Get guild
     guilds = mumbler.guilds.array()
     guild = guilds[0]
