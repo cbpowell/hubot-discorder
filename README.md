@@ -1,4 +1,4 @@
-hubot-mumbler
-=============
+hubot-discorder
+===============
 
 Coming soon.

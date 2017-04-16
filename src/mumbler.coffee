@@ -1,34 +1,25 @@
 # Description:
-#   A Hubot script to track users on a Mumble server.
+#   A Hubot script to track users on a Discord server, nicknamed Mumbot
 #
 # Dependencies:
-#   node-redis
-#   node-mumble
+#   Discord.js
 #
 # Configuration:
-#   HUBOT_REDIS_URL - URL for Redis server
-#   HUBOT_MUMBLE_NICK - Username for Hubot on the Mumble server
-#   HUBOT_MUMBLE_PASS - Password for Mumble server (if required)
-#   HUBOT_MUMBLE_PATH - URL for Mumble server
-#   HUBOT_MUMBLE_KEY - TLS Public key for certificate to connecto Mumble server (if required)
-#   HUBOT_MUMBLE_CERT - TLS Public certificate to connect to Mumble server (if required)
+#   HUBOT_MUMBOT_NICK - Username for Mumbot on the Mumble server
+#   HUBOT_DISCORD_TOKEN - Discord app token for bot-type
 #
 # Commands:
-#   mumble me - List users on Mumble, in all channels
-#   who's online? - List users on Mumble, in all channels
-#   anyone online - List users on Mumble, in all channels
-#   anyone in/on <channel>? - Lists users on Mumble, in specified channel
-#   who's in/on <channel>? - Lists users on Mumble, in specified channel
+#   mumble me - List users on Discord, in all channels
+#   who's online? - List users on Discord, in all channels
+#   anyone online - List users on Discord, in all channels
+#   anyone in/on <channel>? - Lists users on Discord, in specified channel
+#   who's in/on <channel>? - Lists users on Discord, in specified channel
 #
 # Author:
 #   cbpowell
 
 Url = require 'url'
-Redis = require 'redis'
-fs = require 'fs'
-Mumbler = require 'mumble'
-
-RedisStorage = require './redis-storage'
+Discord = require 'discord.js'
 
 String::strip = ->
   if String::trim? then @trim() else @replace /^\s+|\s+$/g, ""
@@ -37,131 +28,150 @@ create_quiet_username = (username) ->
   usernameHead = username.slice(0, 1)
   usernameTail = username.slice(1, username.length)
   usernameHead + "\u200B" + usernameTail
+  
+getAllIndexes = (arr, val) ->
+  indexes = []
+  i = undefined
+  i = 0
+  while i < arr.length
+    if arr[i] == val
+      indexes.push i
+    i++
+  indexes
+
 
 module.exports = (robot) ->
-
-  # Configure redis the same way that redis-brain does.
-  redisInfo = Url.parse process.env.REDISTOGO_URL or
-    process.env.REDISCLOUD_URL or
-    process.env.BOXEN_REDIS_URL or
-    process.env.REDIS_URL or
-    'redis://localhost:6379'
-  client = Redis.createClient(redisInfo.port, redisInfo.hostname, {no_ready_check: true})
-
-  if redisInfo.auth
-    console.log("Mumbler redis authing")
-    client.auth redisInfo.auth.split(":")[1]
-    
   # Configure Mumble interface
   options =
     nick:     process.env.HUBOT_MUMBLE_NICK or robot.name
-    path:     process.env.HUBOT_MUMBLE_PATH
-    password: process.env.HUBOT_MUMBLE_PASSWORD
+    #path:     process.env.HUBOT_MUMBLE_PATH
   
-  mumbleOptions =
-    key:  fs.readFileSync(process.env.HUBOT_MUMBLE_KEY)
-    cert: fs.readFileSync(process.env.HUBOT_MUMBLE_CERT)
+  # Initiate Discord connection
+  mumbler = new Discord.Client
+  token = process.env.HUBOT_DISCORD_TOKEN
   
-  storage = new RedisStorage(client)
+  mumbler.on "ready", ->
+    console.log "Discord connection ready!"
+    
+  mumbler.on "voiceStateUpdate", (oldMember, newMember) ->
+    # Check if the user update is for joining a channel, not leaving
+    if not newMember.voiceChannel?
+      return
+    
+    # Check if this is a channel change, return if not
+    if newMember.voiceChannel is oldMember.voiceChannel
+      return
+      
+    memberName = newMember.nickname
+    channelName = newMember.voiceChannel.name
   
-  # Initiate Mumble connection
-  mumbler = new Mumbler.connect options.path, mumbleOptions, (error, connection) ->
-    throw new Error(error) if error
+    # Filter updates about self
+    if memberName is options.nick
+      return
     
-    # Authenticate and initialize
-    connection.authenticate options.nick, options.password
+    # Update room(s)
+    message = "🎮 #{memberName} moved into #{channelName}"
+    robot.messageRoom process.env.HUBOT_MUMBLE_ANNOUNCE_ROOMS, message
+  
+  mumbler.on "disconnect", (event) ->
+    message = "/me disconnected from Discord 😩"
+    robot.messageRoom robot.messageRoom process.env.HUBOT_MUMBLE_ANNOUNCE_ROOMS, message
     
-    connection.on "initialized", ->
-      console.log "Mumble connection initialized"
-      
-      # Clear previous users
-      storage.clearUsers
-      
-      # Gather current users
-      users = connection.users()
-      for u in users
-        storage.updateUser(u.name, u.channel.id)
-    
-    connection.on 'channelState', (state) ->
-      unless state.channel_id is null or state.name is null
-        storage.updateChannel(state.channel_id, state.name)
-		
-    connection.on "user-move", (user, prevChannel, newChannel, actor) ->
-      userName = user.name
-      channel = newChannel.id
-      
-      # Take opportunity to update all users
-      users = connection.users()
-      storage.updateUsers(users)
-    
-      # Filter updates about self
-      if userName is options.nick
-        return
-    
-      # Filter non-room changes
-      if channel is prevChannel.id
-        return
-      
-      storage.channelNamesForIds channel, (err, channelName) ->
-        displayName = create_quiet_username(userName)
-        # Check type of update
-        if channelName?
-          message = "#{displayName} moved into #{channelName}"
-        else
-          message = "#{displayName} hopped on Mumble!"
-    
-        # Update room(s)
-        robot.messageRoom process.env.HUBOT_MUMBLE_ANNOUNCE_ROOMS, message
-    
-    connection.on "user-disconnect", (user) ->
-      # Take opportunity to update all users
-      users = connection.users()
-      storage.updateUsers(users)
-      
-      # Remove leaving user
-      storage.removeUser(user.name)
-      
-    connection.on "text-message", (textMessage) ->
-      console.log "Text message:", textMessage
+  mumbler.on "reconnecting", (event) ->
+    message = "/me is attempting to reconnect to Discord 🤔"
+    robot.messageRoom robot.messageRoom process.env.HUBOT_MUMBLE_ANNOUNCE_ROOMS, message
+  
+  # Login
+  mumbler.login token
   
   robot.hear /(mumble me$)|(who'?s online\?)|(anyone ((online)|(on mumble))\??)/i, (msg) ->
+    # Get guild
+    guilds = mumbler.guilds.array()
+    guild = guilds[0]
+    if guild.name is not "The Psyjnir Complex"
+      console.log "Wrong guild! #{guild.name}"
+      return
+    # Get members
+    allMembers = guild.members.array()
     ignored = [options.nick]
-    storage.onlineUsers ignored, (users, channels) ->
-      if users.length is 0
-        message = "No one on Mumble 😕"
-        msg.send message
-      else
-        message = "🎮 Online:"
-        for channelName, users of channels
-          message = message + " [#{channelName}] "
-          for u in users
-            u = create_quiet_username(u)
-            message = message + "#{u}, "
+    # Filter members based on ignored, and connected status
+    members = allMembers.filter (member) ->
+      if member.nickname in ignored
+        return false
+      if not member.voiceChannel?
+        return false
+      return true
+    
+    nicknames = members.map (member) ->
+      return member.nickname
+    channels = members.map (member) ->
+      return member.voiceChannel.name
+    
+    #console.log "Nicknames: #{nicknames}"
+    #console.log "Channels: #{channels}"
+    
+    if members.length is 0
+      message = "No one on Mumble 😕"
+    else
+      message = "🎮 Online:"
+      for id, chan of channels
+        idxs = getAllIndexes(channels, chan)
+        message = message + " [#{chan}] "
+        for idx in idxs
+          u = create_quiet_username(nicknames[idx])
+          message = message + "#{u}, "
       
-        message = message.substring(0, message.length - 2)
-        msg.send message
+      message = message.substring(0, message.length - 2)
+    msg.send message
     
   robot.hear /(?:mumble me (.+))|(?:(?:anyone|who'?s) (?:in|on) (.+)\?)/i, (msg) ->
-    channel = msg.match[1] or msg.match[2]
+    reqChannel = msg.match[1] or msg.match[2]
     if not channel?
       msg.send "Not a valid channel 😬"
       return
     
+    # Get guild
+    guilds = mumbler.guilds.array()
+    guild = guilds[0]
+    if guild.name is not "The Psyjnir Complex"
+      console.log "Wrong guild! #{guild.name}"
+      return
+      
+    # Get members
+    allMembers = guild.members.array()
     ignored = [options.nick]
-    storage.onlineUsers ignored, (users, channels) ->
-      message = ''
-      unless channels is not null and channels.length > 0
-        for channelName, users of channels
-          if channel.toLowerCase() is channelName.toLowerCase()
-            if users.length > 0
-              message = "🎮 Online in #{channelName}:"
-              for u in users
-                create_quiet_username(u)
-                message = message + "#{u}, "
-                  
-            message = message.substring(0, message.length - 2)
-            
-      if message is null or message.length is 0
-        message = "No one in #{channel} 😕"
-                  
-      msg.send message
+    
+    members = allMembers.filter (member) ->
+      # Filter members based on ignored, and connected status
+      if member.nickname in ignored
+        return false
+      if not member.voiceChannel?
+        return false
+        
+      # Filter members based on requested channel
+      if member.voiceChannel.name is not reqChannel
+        return false
+      # Otherwise return
+      return true
+    
+    nicknames = members.map (member) ->
+      return member.nickname
+    channels = members.map (member) ->
+      return member.voiceChannel.name
+    
+    #console.log "Nicknames: #{nicknames}"
+    #console.log "Channels: #{channels}"
+    
+    if members.length is 0
+      message = "No one in #{reqChannel} 😕"
+    else
+      message = "🎮 Online in #{reqChannel}:"
+      for id, chan of channels
+        idxs = getAllIndexes(channels, chan)
+        message = message + " [#{chan}] "
+        for idx in idxs
+          u = create_quiet_username(nicknames[idx])
+          message = message + "#{u}, "
+      
+      message = message.substring(0, message.length - 2)
+    msg.send message
