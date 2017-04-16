@@ -112,7 +112,7 @@ module.exports = (robot) ->
     #console.log "Channels: #{channels}"
     
     if members.length is 0
-      message = "No one on Mumble 😕"
+      message = "No one on Discord 😕"
     else
       message = "🎮 Online:"
       for id, chan of channels
