@@ -70,7 +70,8 @@ module.exports = (robot) ->
       return
     
     # Update room(s)
-    message = "🎮 #{memberName} moved into #{channelName}"
+    quietName = create_quiet_username(memberName)
+    message = "🎮 #{quietName} moved into #{channelName}"
     robot.messageRoom process.env.HUBOT_DISCORDER_ANNOUNCE_ROOMS, message
   
   mumbler.on "disconnect", (event) ->
