@@ -75,12 +75,10 @@ module.exports = (robot) ->
     robot.messageRoom process.env.HUBOT_DISCORDER_ANNOUNCE_ROOMS, message
   
   mumbler.on "disconnect", (event) ->
-    message = "/me disconnected from Discord 😩"
-    robot.messageRoom robot.messageRoom process.env.HUBOT_DISCORDER_ANNOUNCE_ROOMS, message
+    console.log "Discord has disconnected."
     
   mumbler.on "reconnecting", (event) ->
-    message = "/me is attempting to reconnect to Discord 🤔"
-    robot.messageRoom robot.messageRoom process.env.HUBOT_DISCORDER_ANNOUNCE_ROOMS, message
+    console.log "Discord is attempting to reconnect."
   
   # Login
   mumbler.login token
