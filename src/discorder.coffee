@@ -99,14 +99,14 @@ module.exports = (robot) ->
     ignored = [options.nick]
     # Filter members based on ignored, and connected status
     members = allMembers.filter (member) ->
-      if member.nickname in ignored
+      if member.nickname in ignored or member.user.username in ignored
         return false
       if not member.voiceChannel?
         return false
       return true
     
     nicknames = members.map (member) ->
-      return member.nickname
+      return (if member.nickname then member.nickname else member.user.username)
     channels = members.map (member) ->
       return member.voiceChannel.name
     
@@ -121,8 +121,9 @@ module.exports = (robot) ->
         idxs = getAllIndexes(channels, chan)
         message = message + " [#{chan}] "
         for idx in idxs
-          u = create_quiet_username(nicknames[idx])
-          message = message + "#{u}, "
+          if nicknames[idx]?
+            u = create_quiet_username(nicknames[idx])
+            message = message + "#{u}, "
       
       message = message.substring(0, message.length - 2)
     msg.send message
