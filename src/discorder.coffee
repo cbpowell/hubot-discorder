@@ -113,11 +113,13 @@ module.exports = (robot) ->
     #console.log "Nicknames: #{nicknames}"
     #console.log "Channels: #{channels}"
     
+    uniqueChannels = channels.filter((x, i, a) => a.indexOf(x) == i)
+    
     if members.length is 0
       message = "No one on Discord 😕"
     else
       message = "🎮 Online:"
-      for id, chan of channels
+      for id, chan of uniqueChannels
         idxs = getAllIndexes(channels, chan)
         message = message + " [#{chan}] "
         for idx in idxs
