@@ -8,6 +8,7 @@
 #   HUBOT_DISCORDER_NICK - Username for Mumbot on the Mumble server
 #   HUBOT_DISCORDER_TOKEN - Discord app token for bot-type
 #   HUBOT_DISCORDER_ANNOUNCE_ROOMS - Rooms to make announcements in
+#   HUBOT_DISCORDER_SHOULD_ANNOUNCE_ROOM_CHANGES - (True/False) Specifies if room changes should be announced. The first voice channel join will always be announced.
 #
 # Commands:
 #   mumble me - List users on Discord, in all channels
@@ -62,6 +63,12 @@ module.exports = (robot) ->
     if newMember.voiceChannel is oldMember.voiceChannel
       return
       
+    # Check if the a channel change should be announced
+    if not process.env.HUBOT_DISCORDER_SHOULD_ANNOUNCE_ROOM_CHANGES
+      if oldMember.voiceChannel?
+        # If the old member has a voice channel, this is not the initial join, do not announce
+        return
+    
     memberName = newMember.nickname
     channelName = newMember.voiceChannel.name
   
