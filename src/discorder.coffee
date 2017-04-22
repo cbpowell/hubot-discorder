@@ -127,7 +127,9 @@ module.exports = (robot) ->
             u = create_quiet_username(nicknames[idx])
             message = message + "#{u}, "
       
-      message = message.substring(0, message.length - 2)
+        
+        message = message.substring(0, message.length - 2)
+        
     msg.send message
     
   robot.hear /(?:mumble me (.+))|(?:(?:anyone|who'?s) (?:in|on) (.+)\?)/i, (msg) ->
