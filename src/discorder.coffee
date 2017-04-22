@@ -79,6 +79,10 @@ module.exports = (robot) ->
     
   mumbler.on "reconnecting", (event) ->
     console.log "Discord is attempting to reconnect."
+    
+  mumbler.on "error", (error) ->
+    if error.message?
+      console.log "Discord error: #{error.message}"
   
   # Login
   mumbler.login token

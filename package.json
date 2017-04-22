@@ -1,7 +1,7 @@
 {
   "name": "hubot-discorder",
   "description": "A Hubot script to track users on a Discord server.",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "author": {
       "name": "Charles Powell",
       "email": "cbpowell@gmail.com"
