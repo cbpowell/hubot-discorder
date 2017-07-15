@@ -76,6 +76,10 @@ module.exports = (robot) ->
     if memberName is options.nick
       return
     
+    # Check for null username
+    if memberName is null
+      return
+      
     # Update room(s)
     quietName = create_quiet_username(memberName)
     message = "🎮 #{quietName} moved into #{channelName}"
