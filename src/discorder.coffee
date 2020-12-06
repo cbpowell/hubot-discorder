@@ -55,44 +55,44 @@ module.exports = (robot) ->
     console.log "Discord connection ready!"
     
   mumbler.on "voiceStateUpdate", (oldMember, newMember) ->
-    # Get user info
-    oldMemberName = oldMember.nickname
-    oldMemberName = oldMember.voiceChannel.name
-    memberName = newMember.nickname
-    channelName = newMember.voiceChannel.name
-    
-    constName = memberName ? oldMemberName
-    
+    if not newMember?
+      logNick = oldMember.nickname ? "[[Unknown]]"
+      console.log "Discorder: Update for #{logNick}: no newMember object, assuming this was a part and ignoring"
+      return
+      
     # Check if the user update is for joining a channel, not leaving
     if not newMember.voiceChannel?
-      console.log "Update for #{constName}: moved to no-channel, assuming this was a part and ignoring"
+      console.log "Discorder: Update for #{newMember.nickname}: moved to no-channel, assuming this was a part and ignoring"
       return
     
     # Check if this is a channel change, return if not
     if newMember.voiceChannel is oldMember.voiceChannel
-      console.log "Update for #{constName}: change not related to voice channel, ignoring"
+      console.log "Discorder: Update for #{newMember.nickname}: change not related to voice channel, ignoring"
       return
       
     # Check if the a channel change should be announced
     if not process.env.HUBOT_DISCORDER_SHOULD_ANNOUNCE_ROOM_CHANGES
       if oldMember.voiceChannel?
         # If the old member has a voice channel, this is not the initial join, do not announce
-        console.log "Update for #{constName}: user has prior voice channel, and room change announce is set to OFF, ignoring"
+        console.log "Discorder: Update for #{newMember.nickname}: user has prior voice channel, and room change announce is set to OFF, ignoring"
         return
+    
+    memberName = newMember.nickname
+    channelName = newMember.voiceChannel.name
   
     # Filter updates about self
     if memberName is options.nick
-      console.log "Update is about the robot itself, ignoring"
+      console.log "Discorder: Update is about the robot itself, ignoring"
       return
     
     # Check for null username
     if memberName is null
-      console.log "Update for #{constName}: update member name is null, ignoring"
+      console.log "Discorder: Update for #{oldMember.nickname}: update member name is null, ignoring"
       return
       
     # Update room(s)
     quietName = create_quiet_username(memberName)
-    console.log "Update for #{constName}: created quite name (#{quietName}), announcing"
+    console.log "Discorder: Update for #{memberName}: created quiet name (#{quietName}), announcing"
     message = "🎮 #{quietName} moved into #{channelName}"
     robot.messageRoom process.env.HUBOT_DISCORDER_ANNOUNCE_ROOMS, message
   
