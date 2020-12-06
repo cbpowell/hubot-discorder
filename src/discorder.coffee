@@ -55,29 +55,30 @@ module.exports = (robot) ->
     console.log "Discord connection ready!"
     
   mumbler.on "voiceStateUpdate", (oldMember, newMember) ->
+      
     if not newMember?
-      logNick = oldMember.nickname ? "[[Unknown]]"
+      logNick = oldMember.displayName ? "[[Unknown]]"
       console.log "Discorder: Update for #{logNick}: no newMember object, assuming this was a part and ignoring"
       return
       
     # Check if the user update is for joining a channel, not leaving
     if not newMember.voiceChannel?
-      console.log "Discorder: Update for #{newMember.nickname}: moved to no-channel, assuming this was a part and ignoring"
+      console.log "Discorder: Update for #{newMember.displayName}: moved to no-channel, assuming this was a part and ignoring"
       return
     
     # Check if this is a channel change, return if not
     if newMember.voiceChannel is oldMember.voiceChannel
-      console.log "Discorder: Update for #{newMember.nickname}: change not related to voice channel, ignoring"
+      console.log "Discorder: Update for #{newMember.displayName}: change not related to voice channel, ignoring"
       return
       
     # Check if the a channel change should be announced
     if not process.env.HUBOT_DISCORDER_SHOULD_ANNOUNCE_ROOM_CHANGES
       if oldMember.voiceChannel?
         # If the old member has a voice channel, this is not the initial join, do not announce
-        console.log "Discorder: Update for #{newMember.nickname}: user has prior voice channel, and room change announce is set to OFF, ignoring"
+        console.log "Discorder: Update for #{newMember.displayName}: user has prior voice channel, and room change announce is set to OFF, ignoring"
         return
     
-    memberName = newMember.nickname
+    memberName = newMember.displayName
     channelName = newMember.voiceChannel.name
   
     # Filter updates about self
@@ -87,7 +88,7 @@ module.exports = (robot) ->
     
     # Check for null username
     if memberName is null
-      console.log "Discorder: Update for #{oldMember.nickname}: update member name is null, ignoring"
+      console.log "Discorder: Update for #{oldMember.displayName}: update member name is null, ignoring"
       return
       
     # Update room(s)
