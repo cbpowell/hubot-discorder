@@ -132,7 +132,7 @@ module.exports = (robot) ->
       return true
     
     nicknames = members.map (member) ->
-      return (if member.nickname then member.nickname else member.user.username)
+      return member.displayName
     channels = members.map (member) ->
       return member.voiceChannel.name
     
