@@ -31,7 +31,7 @@ create_quiet_username = (username) ->
   for x in username
   	quietUsername.push x
   	quietUsername.push "\u200B"
-  quietUsername
+  quietUsername.join("")
   
 getAllIndexes = (arr, val) ->
   indexes = []
