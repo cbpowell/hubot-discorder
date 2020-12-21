@@ -27,9 +27,12 @@ String::strip = ->
   if String::trim? then @trim() else @replace /^\s+|\s+$/g, ""
   
 create_quiet_username = (username) ->
-  usernameHead = username.slice(0, 1)
-  usernameTail = username.slice(1, username.length)
-  usernameHead + "\u200B" + usernameTail
+  quietUsername = []
+  for x in username
+  	quietUsername.push x
+  	quietUsername.push "\u200B"
+  
+    quietUsername
   
 getAllIndexes = (arr, val) ->
   indexes = []
