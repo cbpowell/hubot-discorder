@@ -52,8 +52,7 @@ module.exports = (robot) ->
     #path:     process.env.HUBOT_MUMBLE_PATH
   
   # Initiate Discord connection
-  Intents = new Discord.Intents
-  mumbler = new Discord.Client(intents: [ Intents.FLAGS.GUILDS ])
+  mumbler = new Discord.Client(intents: ["GUILDS"])
   
   token = process.env.HUBOT_DISCORDER_TOKEN
   
