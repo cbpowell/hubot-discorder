@@ -7,6 +7,7 @@
 # Configuration:
 #   HUBOT_DISCORDER_NICK - Username for Mumbot on the Mumble server
 #   HUBOT_DISCORDER_TOKEN - Discord app token for bot-type
+#   HUBOT_DISCORDER_GUILD - Discord guild ID to listen on
 #   HUBOT_DISCORDER_ANNOUNCE_ROOMS - Rooms to make announcements in
 #   HUBOT_DISCORDER_SHOULD_ANNOUNCE_ROOM_CHANGES - (True/False) Specifies if room changes should be announced. The first voice channel join will always be announced.
 #
@@ -29,8 +30,9 @@ String::strip = ->
 create_quiet_username = (username) ->
   quietUsername = []
   for x in username
-  	quietUsername.push x
-  	quietUsername.push "\u200B"
+    quietUsername.push x
+    quietUsername.push "\u200B"
+  
   quietUsername.join("")
   
 getAllIndexes = (arr, val) ->
@@ -50,38 +52,40 @@ module.exports = (robot) ->
     #path:     process.env.HUBOT_MUMBLE_PATH
   
   # Initiate Discord connection
-  mumbler = new Discord.Client
+  Intents = new Discord.Intents
+  mumbler = new Discord.Client(intents: [ Intents.FLAGS.GUILDS ])
+  
   token = process.env.HUBOT_DISCORDER_TOKEN
   
   mumbler.on "ready", ->
     console.log "Discord connection ready!"
     
-  mumbler.on "voiceStateUpdate", (oldMember, newMember) ->
+  mumbler.on "voiceStateUpdate", (oldState, newState) ->
       
-    if not newMember?
-      logNick = oldMember.displayName ? "[[Unknown]]"
-      console.log "Discorder: Update for #{logNick}: no newMember object, assuming this was a part and ignoring"
+    if not newState?
+      logNick = oldState.member.displayName ? "[[Unknown]]"
+      console.log "Discorder: Update for #{logNick}: no newState object, assuming this was a part and ignoring"
       return
       
     # Check if the user update is for joining a channel, not leaving
-    if not newMember.voiceChannel?
-      console.log "Discorder: Update for #{newMember.displayName}: moved to no-channel, assuming this was a part and ignoring"
+    if not newState.voiceChannel?
+      console.log "Discorder: Update for #{newState.displayName}: moved to no-channel, assuming this was a part and ignoring"
       return
     
     # Check if this is a channel change, return if not
-    if newMember.voiceChannel is oldMember.voiceChannel
-      console.log "Discorder: Update for #{newMember.displayName}: change not related to voice channel, ignoring"
+    if newState.voiceChannel is oldState.voiceChannel
+      console.log "Discorder: Update for #{newState.displayName}: change not related to voice channel, ignoring"
       return
       
     # Check if the a channel change should be announced
     if not process.env.HUBOT_DISCORDER_SHOULD_ANNOUNCE_ROOM_CHANGES
-      if oldMember.voiceChannel?
+      if oldState.voiceChannel?
         # If the old member has a voice channel, this is not the initial join, do not announce
-        console.log "Discorder: Update for #{newMember.displayName}: user has prior voice channel, and room change announce is set to OFF, ignoring"
+        console.log "Discorder: Update for #{newState.displayName}: user has prior voice channel, and room change announce is set to OFF, ignoring"
         return
     
-    memberName = newMember.displayName
-    channelName = newMember.voiceChannel.name
+    memberName = newState.displayName
+    channelName = newState.voiceChannel.name
   
     # Filter updates about self
     if memberName is options.nick
@@ -90,7 +94,7 @@ module.exports = (robot) ->
     
     # Check for null username
     if memberName is null
-      console.log "Discorder: Update for #{oldMember.displayName}: update member name is null, ignoring"
+      console.log "Discorder: Update for #{oldState.displayName}: update member name is null, ignoring"
       return
       
     # Update room(s)
@@ -114,19 +118,23 @@ module.exports = (robot) ->
   
   robot.hear /(mumble me$)|(discord me$)|(who'?s online\?)|(anyone ((online)|(on mumble)|(on discord))\??)/i, (msg) ->
     # Get guild
-    guilds = mumbler.guilds.array()
-    guild = guilds[0]
-    if guild.name is not "The Psyjnir Complex"
+    guild = mumbler.guilds.cache.first
+    
+    if not guild?
+      console.log "Failed to find any guild in cache"
+
+    if guild.id is not process.env.HUBOT_DISCORDER_GUILD
       console.log "Wrong guild! #{guild.name}"
       return
+      
     # Get members
-    allMembers = guild.members.array()
+    allMembers = guild.members.fetch()
     ignored = [options.nick]
     # Filter members based on ignored, and connected status
     members = allMembers.filter (member) ->
       if member.nickname in ignored or member.user.username in ignored
         return false
-      if not member.voiceChannel?
+      if not member.voice.channel?
         return false
       return true
     
@@ -163,34 +171,31 @@ module.exports = (robot) ->
       msg.send "Not a valid channel 😬"
       return
     
-    # Get guild
-    guilds = mumbler.guilds.array()
-    guild = guilds[0]
-    if guild.name is not "The Psyjnir Complex"
-      console.log "Wrong guild! #{guild.name}"
-      return
+      # Get guild
+      guild = mumbler.guilds.cache.first
+    
+      if not guild?
+        console.log "Failed to find any guild in cache"
+
+      if guild.id is not process.env.HUBOT_DISCORDER_GUILD
+        console.log "Wrong guild! #{guild.name}"
+        return
       
-    # Get members
-    allMembers = guild.members.array()
-    ignored = [options.nick]
-    
-    members = allMembers.filter (member) ->
+      # Get members
+      allMembers = guild.members.fetch()
+      ignored = [options.nick]
       # Filter members based on ignored, and connected status
-      if member.nickname in ignored
-        return false
-      if not member.voiceChannel?
-        return false
-        
-      # Filter members based on requested channel
-      if member.voiceChannel.name is not reqChannel
-        return false
-      # Otherwise return
-      return true
+      members = allMembers.filter (member) ->
+        if member.nickname in ignored or member.user.username in ignored
+          return false
+        if not member.voice.channel?
+          return false
+        return true
     
-    nicknames = members.map (member) ->
-      return member.nickname
-    channels = members.map (member) ->
-      return member.voiceChannel.name
+      nicknames = members.map (member) ->
+        return member.displayName
+      channels = members.map (member) ->
+        return member.voiceChannel.name
     
     #console.log "Nicknames: #{nicknames}"
     #console.log "Channels: #{channels}"

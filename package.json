@@ -16,8 +16,8 @@
     },
 
   "main": "./src/discorder.coffee",
-  "engine": "node > 0.6.0",
+  "engine": "node > 16.6.0",
   "dependencies": {
-      "discord.js": "^11.0.0"
+      "discord.js": "^13.0.0"
   }
 }
