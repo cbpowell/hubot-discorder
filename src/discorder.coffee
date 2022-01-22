@@ -10,6 +10,7 @@
 #   HUBOT_DISCORDER_GUILD - Discord guild ID to listen on
 #   HUBOT_DISCORDER_ANNOUNCE_ROOMS - Rooms to make announcements in
 #   HUBOT_DISCORDER_SHOULD_ANNOUNCE_ROOM_CHANGES - (True/False) Specifies if room changes should be announced. The first voice channel join will always be announced.
+#   HUBOT_DISCORDER_ANNOUNCE_HIDDEN_ROOMS - Defines if robot should announce updates for rooms/channels that it does not have permission to enter (i.e. private rooms that the bot is not role'd to access). Defaults to false.
 #
 # Commands:
 #   mumble me - List users on Discord, in all channels
@@ -49,10 +50,9 @@ module.exports = (robot) ->
   # Configure Mumble interface
   options =
     nick:     process.env.HUBOT_DISCORDER_NICK or robot.name
-    #path:     process.env.HUBOT_MUMBLE_PATH
   
   # Initiate Discord connection
-  mumbler = new Discord.Client(intents: ["GUILDS"])
+  mumbler = new Discord.Client(intents: ["GUILDS","GUILD_MESSAGES","GUILD_PRESENCES","GUILD_VOICE_STATES"])
   
   token = process.env.HUBOT_DISCORDER_TOKEN
   
@@ -60,42 +60,49 @@ module.exports = (robot) ->
     console.log "Discord connection ready!"
     
   mumbler.on "voiceStateUpdate", (oldState, newState) ->
-      
     if not newState?
       logNick = oldState.member.displayName ? "[[Unknown]]"
       console.log "Discorder: Update for #{logNick}: no newState object, assuming this was a part and ignoring"
       return
-      
+  
     # Check if the user update is for joining a channel, not leaving
-    if not newState.voiceChannel?
+    if not newState.channel?
       console.log "Discorder: Update for #{newState.displayName}: moved to no-channel, assuming this was a part and ignoring"
       return
-    
+
     # Check if this is a channel change, return if not
-    if newState.voiceChannel is oldState.voiceChannel
+    if newState.channelId is oldState.channelId
       console.log "Discorder: Update for #{newState.displayName}: change not related to voice channel, ignoring"
       return
-      
+  
     # Check if the a channel change should be announced
     if not process.env.HUBOT_DISCORDER_SHOULD_ANNOUNCE_ROOM_CHANGES
-      if oldState.voiceChannel?
+      if oldState.channel?
         # If the old member has a voice channel, this is not the initial join, do not announce
         console.log "Discorder: Update for #{newState.displayName}: user has prior voice channel, and room change announce is set to OFF, ignoring"
         return
-    
-    memberName = newState.displayName
-    channelName = newState.voiceChannel.name
-  
+
+    memberName = newState.member.displayName
+    channelName = newState.channel.name
+
+    console.log "new Channel: ", newState.channel.viewable
+
     # Filter updates about self
     if memberName is options.nick
       console.log "Discorder: Update is about the robot itself, ignoring"
       return
-    
+
     # Check for null username
     if memberName is null
       console.log "Discorder: Update for #{oldState.displayName}: update member name is null, ignoring"
       return
-      
+  
+    # Check if room is viewable to robot
+    announceUnviewable = process.env.HUBOT_DISCORDER_ANNOUNCE_HIDDEN_ROOMS ? false
+    if not announceUnviewable and not newState.channel.viewable
+      console.log "Discorder: new channel for #{newState.displayName} is unviewable to robot, ignoring"
+      return
+
     # Update room(s)
     quietName = create_quiet_username(memberName)
     console.log "Discorder: Update for #{memberName}: created quiet name (#{quietName}), announcing"
